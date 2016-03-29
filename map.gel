@@ -1,0 +1,51 @@
+/* load the gene expression data */
+node(string id, float ctrl, float tr1, float tr2) nt;
+link[] lt;
+graph(nt,lt) eco=import("data/eco_raw.tsv","\t");
+
+layout(eco,"cube");
+foreach node in eco where tr1>(ctrl*2) set _g=0.8;
+foreach node in eco where tr1<(ctrl/2) set _r=0.8;
+
+/* load the map */
+node(string id, string kegg) m_nt;
+link<> dlt;
+graph(m_nt,dlt) mapid=import("data/mapid.tsv","\t",1);
+
+/* layout the map */
+float i=-20; 
+foreach link in mapid set in._x=-15,in._y=i,out._x=15,out._y=i, i=i+0.5;
+foreach node in mapid set _r=1,_text=id;
+
+/* use the map function */
+auto eco_mapped=map(eco,mapid,1);
+foreach node in eco_mapped where tr1<(ctrl/2) set _r=0.8,_text=id;
+foreach node in eco_mapped set _text="";
+
+/* reverse the map */
+auto dup=-mapid;
+float i=-20; 
+foreach link in dup set in._x=-15,in._y=i,out._x=15,out._y=i, i=i+0.5;
+/* auto original=map(eco_mapped,dup,1); */
+
+/* load glycolysis for ecoli */
+run "data/eco00010.txt";
+eco00010=select node from eco00010 where type=="compound" || type=="gene";
+eco00010=select node from eco00010 where type=="gene" || (in+out)>0;
+foreach node in eco00010 where type=="gene" set _r=0,_g=0,_b=0;
+foreach node in eco00010 set _z=1;
+
+/* combine with eco expression data */
+node(eco00010:node,eco_mapped:node) cnt;
+link<eco00010:link> clt;
+graph(cnt,clt) result=eco00010;
+result.&=eco_mapped;
+result.+=eco00010;
+foreach node in result where type=="gene" set _r=0,_g=0,_b=0,_z=rand(0.5,1.5);
+foreach node in result where type=="gene" && tr1>(ctrl*2) set _r=0,_r=0.5;
+foreach node in result where type=="gene" && tr2>(ctrl*2) set _r=0,_g=0.5;
+foreach node in result where type=="gene" && _r>0 || _g>0 set _text=name;
+foreach node in result where type=="gene" && _r>0 || _g>0 set _text="";
+
+foreach node in result where type=="gene" && tr2<(ctrl/2) set _r=1;
+
