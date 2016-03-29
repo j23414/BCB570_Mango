@@ -1,0 +1,131 @@
+/* Cmd+Return (Mac) to execute a command */
+/* Ctrl+Enter (Windows,Linux) to execute a command */
+/* Ctrl+S to save a file */
+/* Ctrl+O to open a file */
+/* Ctrl+N to create a new file */
+/* Ctrl++ to increase font size */
+/* Ctrl+- to decrease font size */
+
+/* Data primitives */
+int i=1;
+float f=2.2;
+double d=3.3;
+string s="hello world";
+
+print i+f;
+print sin(i+f); /* contains some mathematical functions, type help for list of all functions */
+
+delete i,f,d,s; /* delete objects */
+clear;          /* deletes everything */
+
+/* All graphs have a node and link attributes */
+node(string id) nt;  /* most basic node type */
+link[] u_lt;         /* most basic undirected link */
+link<> d_lt;         /* most basic directed link */
+
+/* Load in a network file */
+graph(nt,u_lt) g=import("data/first.txt",",");
+layout(g,"random");
+foreach node in g set _text=id,_b=1,_g=0.6;
+delete g;
+
+/* Load an edgelist file */
+graph(nt,u_lt) g=import("data/edgelist.txt",",",1); 
+/* \t=tab character */
+layout(g,"random");
+
+/* Generate Random graphs */
+graph(nt,u_lt) g=random(20,50);
+layout(g,"random");
+
+/* A more complex graph, a bunch of link attributes */
+link[int n1id, int n2id, string n1ex, string n2ex, float neighborhood, float fusion, float cooccurence, float homology, float coexpression, float experimental, float knowledge, float textmining, float combined_score] lt;
+graph(nt,lt) g = import("data/aldo.csv",",");
+
+/* Modify visual attributes */
+foreach node in g set _x=rand(-5,5),_y=rand(-4,4),_z=rand(-2,0);
+foreach node in g set _r=rand(),_g=rand(),_b=rand();
+
+foreach link in g set _width=combined_score*5;
+foreach link in g set _r=(in._r+out._r)/2,_g=(in._g+out._g)/2,_b=(in._b+out._b)/2;
+
+/* layout command */
+layout(g,"circle");
+layout(g,"random");
+layout(g,"cube");
+
+/* fetch one of the KEGG pathways or run the following */
+run "data/hsa00010.txt";
+
+foreach node in hsa00010 set _text=id;
+foreach node in hsa00010 set _text="";
+foreach node in hsa00010 where type=="compound" set _text=type;
+foreach node in hsa00010 where type=="map" &&_g>0 set _text=name;
+hsa00010 = select node from hsa00010 where type=="gene" || type=="compound";
+hsa00010 = select node from hsa00010 where type=="gene" || (in+out)>0;
+foreach node in hsa00010 where type=="compound" set _text="";
+foreach node in hsa00010 where type=="gene" set _z=rand(-0.5,0.5);
+foreach node in hsa00010 set _text=reaction;
+
+foreach node in hsa00010 where type=="compound" set _z=(in+out)/2;
+foreach node in hsa00010 where type=="compound" set _z=0;
+foreach node in hsa00010 where type=="gene" set _radius=log(in+out)/5;
+foreach node in hsa00010 where type=="gene" set _z=(in+out)/5,_text=substr(name,0,3);
+foreach node in hsa00010 where type=="gene" set _text=in+out;
+
+/* fetch gene to gene network */
+auto gene=select node from hsa00010 where type=="gene";
+
+/* ===================================*/
+/* Graph Mathematics 
+/* ===================================*/
+node(string id, int count,float x,float y, float z) nt_a;
+link[float weight] lt;
+node(string id, string tag,float x, float y, float z) nt_b;
+graph(nt_a,lt) red=import("data/red.txt",",");
+graph(nt_b,lt) blue=import("data/blue.txt");
+
+/* layout */
+foreach node in red set _x=x,_y=y,_z=z,_text="  ".id,_r=1;
+foreach node in blue set _x=x,_y=y,_z=z,_text="  ".id,_b=1;
+foreach link in red set _width=4,_r=1,_text=substr(weight,0,4);
+foreach link in blue set _width=4,_b=1,_text=substr(weight,0,4);
+
+node(red:node,blue:node) nt_c;
+graph(nt_c,lt) result;
+
+/* additions */
+result = red+blue;
+result=blue+red;
+result=red.+blue;
+result=blue.+red;
+
+/* subtractions */
+result=blue-red;
+result=red-blue;
+result=blue.-red;
+result=red.-blue;
+
+/* multiplication */
+result=red*blue;
+result=red*red-red;
+
+/* intersection */
+result = red & blue;
+result = red .& blue;
+result = blue & red;
+result = blue .& red;
+
+/* save and reload result */
+save "result.txt",result;
+delete result;
+run "result.txt";
+
+/* save and reload workspace */
+save "workspace.txt";
+clear;
+run "workspace.txt";
+
+/* export to other programs */
+export("result.tsv","tsv",result);
+
